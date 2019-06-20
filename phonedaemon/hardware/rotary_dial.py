@@ -28,16 +28,16 @@ class RotaryDial:
         :param rotation_problem: Callback accepting one argument [number] of pulses that were outside 1-10 scope.
         :return:
         """
-        Rio.init(GPIO.BOARD)
+        Rio.init(GPIO.BCM)
 
-        self.rotation = Rin(config.PIN_IN_ROTATING, bounce_interval=self.bounce_time)
-        self.pulse = Rin(config.PIN_IN_PULSE, bounce_interval=self.bounce_time)
+        self.rotation = Rin(config.PIN_IN_ROTATING, bounce_interval=self.bounce_time, power_number=config.PIN_POWER_ROTATING)
+        self.pulse = Rin(config.PIN_IN_PULSE, bounce_interval=self.bounce_time, power_number=config.PIN_POWER_PULSE)
 
-        self.rotation_led = Rout(config.PIN_OUT_ROTATING)
-        self.pulse_led = Rout(config.PIN_OUT_PULSE)
+        #self.rotation_led = Rout(config.PIN_OUT_ROTATING)
+        #self.pulse_led = Rout(config.PIN_OUT_PULSE)
 
-        self.rotation_led.set(not self.rotation.state())
-        self.pulse_led.set(self.pulse.state())
+        #self.rotation_led.set(not self.rotation.state())
+        #self.pulse_led.set(self.pulse.state())
 
         self.rotation.changed = self.rotation_changed
         self.pulse.changed = self.pulse_changed
@@ -48,14 +48,16 @@ class RotaryDial:
         self.rotation_problem = rotation_problem
 
     def pulse_changed(self, new_state, event_time, previous_state_duration):
-        self.pulse_led.set(new_state)
+        print "pulse_changed"
+        #self.pulse_led.set(new_state)
         if new_state == 1:
             self.pulses += 1
 
     def rotation_changed(self, new_state, event_time, previous_state_duration):
-        self.rotation_led.set(not new_state)
+        #self.rotation_led.set(not new_state)
+        print "rotation changed"
 
-        if new_state == 0:
+        if new_state == 1:
             # rotation_started
             self.pulses = 0
         else:

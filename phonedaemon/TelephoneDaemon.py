@@ -17,12 +17,13 @@ import sys
 import yaml
 
 
-from phonedaemon.modules.Ringer import AlsaRinger
-from phonedaemon.modules.HardwareAbstractionLayer \
+#from modules.Ringer import AlsaRinger
+from modules.Ringer import BellRinger
+from modules.HardwareAbstractionLayer \
     import AstralHAL, ElektriskHAL
-from phonedaemon.modules.DialTimer import DialTimer
+from modules.DialTimer import DialTimer
 # from phonedaemon.modules.Webserver import Webserver
-from phonedaemon.modules.SipClient import SipClient, CallHandler, \
+from modules.SipClient import SipClient, CallHandler, \
     AccountHandler
 
 
@@ -69,10 +70,13 @@ class TelephoneDaemon(object):
             print "[INFO] Using dialling timeout value:", self.dialling_timeout
         self.timer = DialTimer(timeout_length=self.dialling_timeout)
 
-        self.ringer = AlsaRinger(sound_files=self.config["soundfiles"],
+        #self.ringer = AlsaRinger(sound_files=self.config["soundfiles"],
+        #                         alsa_devices=self.config["alsadevices"])
+
+        self.ringer = BellRinger(sound_files=self.config["soundfiles"],
                                  alsa_devices=self.config["alsadevices"])
 
-        self.hal = AstralHAL()
+        self.hal = AutomaticElectricHAL()
         self.hal.register_callbacks(self.digit_dialled,
                                     self.earpiece_replaced,
                                     self.earpiece_lifted)
@@ -101,8 +105,8 @@ class TelephoneDaemon(object):
         }
         self.account_handler.register_callbacks(**account_callbacks)
 
-        # self.sipclient.set_audio(self.config["alsadevices"]["earpiece"],
-        #                          self.config["alsadevices"]["mouthpiece"])
+        self.sipclient.set_audio(self.config["alsadevices"]["earpiece"],
+                                 self.config["alsadevices"]["mouthpiece"])
 
         login_hostname = self.config["sip"]["hostname"]
         if login_hostname[0:4] != "sip:":
@@ -110,7 +114,8 @@ class TelephoneDaemon(object):
 
         self.sipclient.login(self.config["sip"]["hostname"],
                              self.config["sip"]["username"],
-                             self.config["sip"]["password"])
+                             self.config["sip"]["password"],
+                             self.config["sip"]["domain"])
 
         self.entered_digits = self.config["sip"]["testnumber"]
         self.call_number()
@@ -159,6 +164,7 @@ class TelephoneDaemon(object):
         """
         print "[INFO] Calling number"
         self.sipclient.dial(self.entered_digits)
+
         # Log call to call log.
 
     def timeout_reached(self):
@@ -212,7 +218,7 @@ class TelephoneDaemon(object):
             self.ringer.stop_ringer()
             return None
         self.ringer.stop_earpiece()
-        if not self.active_call.is_valid()
+        if not self.active_call.is_valid():
             self.active_call = None
 
     def call_dropped(self):
@@ -220,7 +226,7 @@ class TelephoneDaemon(object):
         The SIP client reports a dropped call.
         """
         self.ringer.stop_earpiece()
-        if not self.active_call.is_valid()
+        if not self.active_call.is_valid():
             self.active_call = None
 
     def call_failed(self):
@@ -229,7 +235,7 @@ class TelephoneDaemon(object):
         the error code.
         """
         self.ringer.play_error()
-        if not self.active_call.is_valid()
+        if not self.active_call.is_valid():
             self.active_call = None
 
     def sigint_received(self, signal_name, frame):

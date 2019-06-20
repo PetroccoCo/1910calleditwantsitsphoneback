@@ -1,0 +1,29 @@
+--- # Sample configuration file for 1910calleditwantsitsphoneback
+hardware:
+  hardwarering: False
+  dialermode: 'Astral'
+
+soundfiles:
+  startup: 'startup1.wav'
+  shutdown: 'shutdown1.wav'
+  ringtone: 'aselektriskbureau.wav'
+  busy: 'uk24_busy.wav'
+  error: 'uk24_unobtainable.wav'
+  dialtone: 'uk24_dialtone.wav'
+  ringing: 'uk24_ringing.wav'
+
+sip:
+  username: 'user_DXDVYC8uYg@pgisandbox.gm.ucaas.com'
+  password: '9G4WpvuX9V6J'
+  hostname: 'AE-80'
+  domain: 'sip.uc.globalmeet.com'
+  port: 5060
+  testnumber: '17209350567'
+
+alsadevices:
+  ringer: 'default:CARD=Device'
+  earpiece: 'default:CARD=Device'
+  mouthpiece: 'default:CARD=Device'
+
+diallingtimeout: 2
+...

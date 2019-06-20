@@ -55,7 +55,7 @@ class Rio:
 
 
 class Rin(Rio):
-    def __init__(self, number, bounce_interval=0):
+    def __init__(self, number, bounce_interval=0, power_number=-1):
         self.falling = None
         self.rising = None
         self.changed = None
@@ -63,7 +63,7 @@ class Rin(Rio):
         self.number = number
         self.bounce_interval = bounce_interval  # ms
 
-        GPIO.setup(number, GPIO.IN)
+        GPIO.setup(number, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         GPIO.add_event_detect(self.number, GPIO.BOTH, callback=self.edge)
 
         self.event_time = self.ms_time()
@@ -74,6 +74,11 @@ class Rin(Rio):
 
         self.bounce_time = 0
         self.bounce_timer = None
+
+        # Setup power pin if needed
+        if power_number > 0:
+            GPIO.setup(power_number, GPIO.OUT)
+            GPIO.output(power_number, GPIO.HIGH)
 
     def reset(self):
         self.event_time = self.ms_time()

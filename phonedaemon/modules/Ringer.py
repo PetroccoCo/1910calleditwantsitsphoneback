@@ -15,7 +15,7 @@ import time
 import wave
 import os
 import alsaaudio
-
+import RPi.GPIO as GPIO
 
 class Device(object):
     """
@@ -179,20 +179,35 @@ class BellRinger(Ringer):
     bells of an early manual or automatic telephone from the first half of the
     20th century.
     """
+    pwmOutput = None
+
     def __init__(self, *args, **kwargs):
         super(BellRinger, self).__init__(*args, **kwargs)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(18, GPIO.OUT)
+        self.pwmOutput = GPIO.PWM(18, 16.6)
+
+
+    def clean_exit(self):
+        """
+        Cleanly exit by stopping playback and closing any ALSA devices.
+        """
+        self.pwmOutput.stop()
+        GPIO.cleanup()
 
     def stop_ringer(self):
         """
         Stop the ringer from sounding, when answered or the caller hangs up.
         """
-        return None  # Silence the hardware bell.
+        # Silence the hardware bell.
+        self.pwmOutput.stop()
 
     def play_ringer(self):
         """
         Play the ringer on an incoming call.
         """
-        return None  # Ring the hardware bell.
+        # Ring the hardware bell.
+        self.pwmOutput.start(10) 
 
 
 class AlsaRinger(Ringer):

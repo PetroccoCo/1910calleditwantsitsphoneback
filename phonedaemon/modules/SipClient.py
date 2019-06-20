@@ -7,9 +7,9 @@ ALSO pretty undocumented. So, great fun.
 """
 
 
-from pjsua import Lib, AccountConfig, LogConfig, CallCallback, \
-    AccountCallback, TransportType, MediaState
-
+from pjsua import Lib, AuthCred, AccountConfig, LogConfig, CallCallback, \
+    AccountCallback, TransportType, MediaState, MediaConfig, UAConfig, TransportConfig
+import threading
 
 def log(level, string, length):
     """
@@ -39,10 +39,17 @@ class SipClient(object):
 
     def __init__(self):
         self.lib = Lib()
-        self.lib.init(log_cfg=LogConfig(level=3, callback=log))
+        my_ua_cfg = UAConfig()
+        my_ua_cfg.nameserver = ['8.8.8.8', '8.8.4.4']
+        my_ua_cfg.stun_host = "stun.ekiga.net"
+        my_media_cfg = MediaConfig()
+        my_media_cfg.enable_ice = False
 
-        self.transport = self.lib.create_transport(TransportType.UDP)
+        self.lib.init(ua_cfg=my_ua_cfg, media_cfg=my_media_cfg, log_cfg=LogConfig(level=4, callback=log))
 
+        # Create UDP transport which listens to any available port
+        self.transport = self.lib.create_transport(TransportType.UDP, TransportConfig(0))
+    
     def set_audio(self, earpiece_device, mouthpiece_device):
         """
         Use ALSA audio name to select sound device for pjsip.
@@ -52,6 +59,7 @@ class SipClient(object):
 
         devices = self.lib.enum_snd_dev()
         for index, device in enumerate(devices):
+            print "[INFO] got earpiece", device.name, index
             if device.name == earpiece_device:
                 print "[INFO] got earpiece", device.name, index
                 earpiece_index = index
@@ -71,15 +79,28 @@ class SipClient(object):
 
         self.lib.set_snd_dev(mouthpiece_index, earpiece_index)
 
-    def login(self, hostname, username, password):
+    def login(self, hostname, username, password, domain=''):
         """
         Connect to a SIP server using the provided credentials.
         """
         self.lib.start()
-        self.hostname = hostname
-        self.account_config = AccountConfig(hostname, username, password)
+        self.hostname = 'pgisandbox.gm.ucaas.com'
+        #self.account_config = AccountConfig(domain, hostname, username, password)
+        self.account_config = AccountConfig()
+        self.account_config.reg_uri  = "sip:sip.uc.globalmeet.com"
+        self.account_config.id = "sip:user_DXDVYC8uYg@pgisandbox.gm.ucaas.com"
+        self.account_config.auth_cred = [AuthCred("pgisandbox.gm.ucaas.com", "user_DXDVYC8uYg", "9G4WpvuX9V6J")]
+
         self.login_object = self.lib.create_account(self.account_config,
                                                     cb=self.account_handler)
+
+        self.account_handler.wait()
+
+        print "\n"
+        print "Registration complete, status=", self.login_object.info().reg_status, \
+              "(" + self.login_object.info().reg_reason + ")"
+
+
 
     def dial(self, number):
         """
@@ -136,7 +157,7 @@ class CallHandler(CallCallback):
         dropped, rejected, etc.
         """
         if self.call.info().media_state == MediaState.ACTIVE:
-            self.connected(call)
+            self.connected(self.call)
 
     def register_callbacks(self, remote_busy, connected,
                            remote_hangup, call_dropped, call_failed):
@@ -161,33 +182,30 @@ class AccountHandler(AccountCallback):
     incoming_call = None
 
     def __init__(self, account=None):
+        print "Account handler created"
         AccountCallback.__init__(self, account)  # Use Super() when fixed.
 
     def on_incoming_call(self, call):
         """
         Pass the call object back to the phone application.
         """
-
+        print "Incoming call!!! %s" % call
         self.incoming_call(call)
 
-    def on_reg_state(self):
-        """
-        I think this is just a notification? Provides info on registration?
-        It should be making callbacks to TelephoneDaemon so we can give error
-        alerts if you try and pick up the phone before it's connected.
-        """
-        print "Registering: %s (%s" % (self.account.info().reg_status,
-                                       self.account.info().reg_reason)
-        if False == True:
-            self.registered()
+    def wait(self):
+        self.sem = threading.Semaphore(0)
+        self.sem.acquire()
 
-        if False == True:
-            self.unregistered()
+    def on_reg_state(self):
+        if self.sem:
+            if self.account.info().reg_status >= 200:
+                self.sem.release()
 
     def register_callbacks(self, registered, unregistered, incoming_call):
         """
         Register callback functions to calling application
         """
+        print "register_callback"
 
         self.incoming_call = incoming_call
         self.registered = registered
